@@ -1,0 +1,20 @@
+/*
+ * Optional theme tokens for @vivek-kumar/perf-lab.
+ *
+ * Import this file in your host project if you don't define these tokens yourself:
+ *   import '@vivek-kumar/perf-lab/theme.css';
+ *
+ * Or define your own values for these CSS custom properties in your Tailwind @theme block.
+ */
+
+@theme {
+  --color-accent: #635bff;
+  --color-accent-hover: #5248e6;
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-border-window: rgba(255, 255, 255, 0.08);
+  --color-surface-hover: rgba(255, 255, 255, 0.1);
+  --color-surface-active: rgba(255, 255, 255, 0.15);
+  --color-surface-card: rgba(255, 255, 255, 0.05);
+  --color-surface-card-border: rgba(255, 255, 255, 0.05);
+}
