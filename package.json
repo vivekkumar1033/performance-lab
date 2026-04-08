@@ -40,7 +40,6 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "prepare": "npm run build:lib",
     "prepublishOnly": "npm run build:lib"
   },
   "dependencies": {
