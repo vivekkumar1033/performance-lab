@@ -1,5 +1,5 @@
 {
-  "name": "perf-lab",
+  "name": "@vivek-kumar/perf-lab",
   "version": "0.1.0",
   "type": "module",
   "description": "Interactive web performance learning tool — diagnose real-world performance problems, apply fixes, and master Core Web Vitals",
@@ -40,6 +40,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "prepare": "npm run build:lib",
     "prepublishOnly": "npm run build:lib"
   },
   "dependencies": {
