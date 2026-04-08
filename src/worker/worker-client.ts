@@ -1,7 +1,5 @@
-import type { Insight, ScenarioId, Score, Session, Tradeoff } from '../types';
-import type { FieldProjection, InsightV2, MetricsV2, ScoreV2 } from '../types-v2';
-import type { WorkerResponse } from './protocol';
-import type { AuditSnapshotPayload, FullAnalysisResult, WorkerResponseV2 } from './protocol-v2';
+import type { FieldProjection, FullAnalysisResult, Insight, InsightV2, MetricsV2, ScenarioId, Score, ScoreV2, Session, Tradeoff } from '../types';
+import type { AuditSnapshotPayload, WorkerResponse, WorkerResponseV2 } from './protocol';
 
 interface PendingRequest {
   resolve: (value: unknown) => void;

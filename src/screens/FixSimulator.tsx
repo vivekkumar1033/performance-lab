@@ -10,13 +10,10 @@ import WaterfallChart from '../components/WaterfallChart';
 import ProfileSelector from '../components/ProfileSelector';
 import type { Milestone } from '../components/WaterfallChart';
 import MetricsBadge from '../components/MetricsBadge';
-import type { PerfLabWorkerClient } from '../worker/worker-client';
+import { useWorker } from '../worker/WorkerContext';
 
-interface FixSimulatorProps {
-  getWorker: () => PerfLabWorkerClient;
-}
-
-function FixSimulator({ getWorker }: FixSimulatorProps) {
+function FixSimulator() {
+  const worker = useWorker();
   const session = usePerfLabSession();
   const scenarioId = usePerfLabScenarioId();
   const actions = usePerfLabActions();
@@ -27,23 +24,23 @@ function FixSimulator({ getWorker }: FixSimulatorProps) {
   const handleToggle = useCallback(async (fixId: string) => {
     setLoadingFix(fixId);
     try {
-      const updatedSession = await getWorker().toggleFix(fixId);
+      const updatedSession = await worker.toggleFix(fixId);
       actions.setSession(updatedSession);
     } finally {
       setLoadingFix(null);
     }
-  }, [getWorker, actions]);
+  }, [worker, actions]);
 
   const handleProfileChange = useCallback(async (profileId: string) => {
     try {
-      const result = await getWorker().setRuntimeProfile(profileId);
+      const result = await worker.setRuntimeProfile(profileId);
       actions.setSession(result.session);
       actions.setRuntimeProfile(profileId);
       actions.setMetricsV2(result.metricsV2);
     } catch {
       // Profile change failed — keep current state
     }
-  }, [getWorker, actions]);
+  }, [worker, actions]);
 
   const handleContinue = useCallback(() => {
     actions.setScreen('tradeoffs');

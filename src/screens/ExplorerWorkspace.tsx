@@ -26,11 +26,7 @@ import UXStateIndicators from '../components/UXStateIndicators';
 import FieldProjectionSummary from '../components/FieldProjectionSummary';
 import TradeoffWarningInline from '../components/TradeoffWarningInline';
 import type { Milestone } from '../components/WaterfallChart';
-import type { PerfLabWorkerClient } from '../worker/worker-client';
-
-interface ExplorerWorkspaceProps {
-  getWorker: () => PerfLabWorkerClient;
-}
+import { useWorker } from '../worker/WorkerContext';
 
 // ── LCP Breakdown phase config ──────────────────────────────────────
 const PHASE_CONFIG = [
@@ -42,7 +38,8 @@ const PHASE_CONFIG = [
 
 type Phase = 'audit' | 'fix';
 
-function ExplorerWorkspace({ getWorker }: ExplorerWorkspaceProps) {
+function ExplorerWorkspace() {
+  const worker = useWorker();
   const session = usePerfLabSession();
   const scenarioId = usePerfLabScenarioId();
   const actions = usePerfLabActions();
@@ -64,7 +61,7 @@ function ExplorerWorkspace({ getWorker }: ExplorerWorkspaceProps) {
     if (!session) return;
     setAuditLoading(true);
     try {
-      const payload = await getWorker().auditFullSnapshot();
+      const payload = await worker.auditFullSnapshot();
       const roundNumber = auditHistory.rounds.length + 1;
       const snapshot = createSnapshot(
         roundNumber,
@@ -81,7 +78,7 @@ function ExplorerWorkspace({ getWorker }: ExplorerWorkspaceProps) {
     } finally {
       setAuditLoading(false);
     }
-  }, [getWorker, session, auditHistory.rounds.length, actions]);
+  }, [worker, session, auditHistory.rounds.length, actions]);
 
   // Auto-run first audit on mount
   useEffect(() => {
@@ -195,33 +192,33 @@ function ExplorerWorkspace({ getWorker }: ExplorerWorkspaceProps) {
   const handleToggle = useCallback(async (fixId: string) => {
     setLoadingFix(fixId);
     try {
-      const updatedSession = await getWorker().toggleFix(fixId);
+      const updatedSession = await worker.toggleFix(fixId);
       actions.setSession(updatedSession);
     } finally {
       setLoadingFix(null);
     }
-  }, [getWorker, actions]);
+  }, [worker, actions]);
 
   // Profile change
   const handleProfileChange = useCallback(async (profileId: string) => {
     try {
-      const result = await getWorker().setRuntimeProfile(profileId);
+      const result = await worker.setRuntimeProfile(profileId);
       actions.setSession(result.session);
       actions.setRuntimeProfile(profileId);
       actions.setMetricsV2(result.metricsV2);
     } catch {
       // keep current state
     }
-  }, [getWorker, actions]);
+  }, [worker, actions]);
 
   // Reset all
   const handleReset = useCallback(async () => {
     if (!scenarioId) return;
-    const newSession = await getWorker().loadScenario(scenarioId);
+    const newSession = await worker.loadScenario(scenarioId);
     actions.setSession(newSession);
     actions.resetAuditHistory();
     initialLoadRef.current = false;
-  }, [getWorker, scenarioId, actions]);
+  }, [worker, scenarioId, actions]);
 
   // Submit
   const handleSubmit = useCallback(() => {

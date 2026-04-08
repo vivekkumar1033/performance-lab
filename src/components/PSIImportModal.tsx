@@ -4,8 +4,7 @@ import { parsePSIResponse } from '../engines/psi-import-parser';
 import { mapPSIToScenario } from '../engines/psi-to-scenario-mapper';
 import { usePerfLabActions } from '../store';
 import { formatMs } from '../lib/format';
-import type { ParsedPSIReport } from '../types-v2';
-import type { ScenarioDefinition } from '../types';
+import type { ParsedPSIReport, ScenarioDefinition } from '../types';
 
 interface PSIImportModalProps {
   onClose: () => void;

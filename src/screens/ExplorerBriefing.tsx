@@ -7,13 +7,10 @@ import {
 } from '../store';
 import { SCENARIOS } from '../data';
 import { DIFFICULTY_COLORS } from '../constants';
-import type { PerfLabWorkerClient } from '../worker/worker-client';
+import { useWorker } from '../worker/WorkerContext';
 
-interface ExplorerBriefingProps {
-  getWorker: () => PerfLabWorkerClient;
-}
-
-function ExplorerBriefing({ getWorker }: ExplorerBriefingProps) {
+function ExplorerBriefing() {
+  const worker = useWorker();
   const scenarioId = usePerfLabScenarioId();
   const actions = usePerfLabActions();
   const [workerReady, setWorkerReady] = useState(false);
@@ -26,7 +23,7 @@ function ExplorerBriefing({ getWorker }: ExplorerBriefingProps) {
     loadedRef.current = true;
 
     actions.setLoading(true);
-    getWorker()
+    worker
       .loadScenario(scenarioId)
       .then(session => {
         actions.setSession(session);
@@ -35,7 +32,7 @@ function ExplorerBriefing({ getWorker }: ExplorerBriefingProps) {
       .finally(() => {
         actions.setLoading(false);
       });
-  }, [scenarioId, getWorker, actions]);
+  }, [scenarioId, worker, actions]);
 
   const handleContinue = useCallback(() => {
     actions.setScreen('explorer');

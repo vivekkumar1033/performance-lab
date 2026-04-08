@@ -1,6 +1,6 @@
 import { memo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import type { AuditHistory } from '../types-v2';
+import type { AuditHistory } from '../types';
 
 interface AuditRoundStripProps {
   auditHistory: AuditHistory;

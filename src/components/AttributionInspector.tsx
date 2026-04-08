@@ -1,14 +1,14 @@
 import { memo, useState } from 'react';
 import { CWV_THRESHOLDS } from '../constants';
 import { formatMs } from '../lib/format';
-import type { Metrics } from '../types';
 import type {
   AttributionBundle,
+  InteractionRecord,
   LCPBreakdownV2,
   LayoutShiftSessionWindow,
-  InteractionRecord,
   LoAFEntrySimulated,
-} from '../types-v2';
+  Metrics,
+} from '../types';
 
 interface AttributionInspectorProps {
   metrics: Metrics;

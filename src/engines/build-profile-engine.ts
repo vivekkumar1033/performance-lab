@@ -8,8 +8,8 @@
  * - Cache control → affects repeat-visit behavior
  */
 
-import { COMPRESSION_RATIOS } from '../constants-v2';
-import type { BuildProfile, ResolvedRequestV2 } from '../types-v2';
+import { COMPRESSION_RATIOS } from '../constants';
+import type { BuildProfile, ResolvedRequestV2 } from '../types';
 
 /**
  * Apply a build profile to all requests, adjusting sizes and costs.

@@ -2,14 +2,6 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import type {
-  Insight,
-  ScenarioId,
-  Score,
-  Screen,
-  Session,
-  Tradeoff,
-} from './types';
-import type {
   AttributionBundle,
   AuditHistory,
   AuditRoundSnapshot,
@@ -17,60 +9,47 @@ import type {
   InsightV2,
   MetricsV2,
   ParsedPSIReport,
-  ScoreV2,
-  TradeoffV2,
-} from './types-v2';
+  ScenarioId,
+  Score,
+  Screen,
+  Session,
+  Tradeoff,
+} from './types';
 
 // ── View mode for field vs lab toggle ─────────────────────────────────
 export type ViewMode = 'lab' | 'field';
 
 interface PerfLabStoreState {
-  // v1 state
   currentScreen: Screen;
   selectedScenarioId: ScenarioId | null;
   session: Session | null;
-  insights: Insight[];
+  insights: InsightV2[];
   tradeoffs: Tradeoff[];
   score: Score | null;
   isLoading: boolean;
   completedScenarios: ScenarioId[];
-
-  // v2 state
-  insightsV2: InsightV2[];
-  tradeoffsV2: TradeoffV2[];
-  scoreV2: ScoreV2 | null;
   metricsV2: MetricsV2 | null;
   attribution: AttributionBundle | null;
   activeRuntimeProfileId: string;
   viewMode: ViewMode;
   fieldProjection: FieldProjection | null;
-
-  // PSI import state
   importedPSIReport: ParsedPSIReport | null;
   showReferenceDrawer: boolean;
-
-  // Explorer mode
   explorerMode: boolean;
-
-  // Audit history (Explorer flow)
   auditHistory: AuditHistory;
+  error: string | null;
 }
 
 interface PerfLabStoreActions {
   selectScenario: (id: ScenarioId) => void;
   setScreen: (screen: Screen) => void;
   setSession: (session: Session) => void;
-  setInsights: (insights: Insight[]) => void;
+  setInsights: (insights: InsightV2[]) => void;
   setTradeoffs: (tradeoffs: Tradeoff[]) => void;
   setScore: (score: Score) => void;
   setLoading: (loading: boolean) => void;
   markCompleted: (id: ScenarioId) => void;
   reset: () => void;
-
-  // v2 actions
-  setInsightsV2: (insights: InsightV2[]) => void;
-  setTradeoffsV2: (tradeoffs: TradeoffV2[]) => void;
-  setScoreV2: (score: ScoreV2) => void;
   setMetricsV2: (metrics: MetricsV2) => void;
   setAttribution: (attribution: AttributionBundle) => void;
   setRuntimeProfile: (profileId: string) => void;
@@ -79,11 +58,10 @@ interface PerfLabStoreActions {
   setPSIReport: (report: ParsedPSIReport | null) => void;
   toggleReferenceDrawer: () => void;
   selectScenarioExplorer: (id: ScenarioId) => void;
-
-  // Audit history actions
   pushAuditRound: (snapshot: AuditRoundSnapshot) => void;
   setCurrentRoundIndex: (index: number) => void;
   resetAuditHistory: () => void;
+  setError: (error: string | null) => void;
 }
 
 type PerfLabStore = PerfLabStoreState & { actions: PerfLabStoreActions };
@@ -97,11 +75,6 @@ const INITIAL_STATE: PerfLabStoreState = {
   score: null,
   isLoading: false,
   completedScenarios: [],
-
-  // v2 initial state
-  insightsV2: [],
-  tradeoffsV2: [],
-  scoreV2: null,
   metricsV2: null,
   attribution: null,
   activeRuntimeProfileId: 'desktop-balanced',
@@ -111,6 +84,7 @@ const INITIAL_STATE: PerfLabStoreState = {
   showReferenceDrawer: false,
   explorerMode: false,
   auditHistory: { rounds: [], currentRoundIndex: -1 },
+  error: null,
 };
 
 const usePerfLabStore = create<PerfLabStore>()(
@@ -153,16 +127,6 @@ const usePerfLabStore = create<PerfLabStore>()(
             auditHistory: { rounds: [], currentRoundIndex: -1 },
           })),
 
-        // v2 actions
-        setInsightsV2: (insightsV2) =>
-          set({ insightsV2 }),
-
-        setTradeoffsV2: (tradeoffsV2) =>
-          set({ tradeoffsV2 }),
-
-        setScoreV2: (scoreV2) =>
-          set({ scoreV2 }),
-
         setMetricsV2: (metricsV2) =>
           set({ metricsV2 }),
 
@@ -187,7 +151,6 @@ const usePerfLabStore = create<PerfLabStore>()(
         selectScenarioExplorer: (id) =>
           set({ selectedScenarioId: id, currentScreen: 'explorer-briefing', explorerMode: true }),
 
-        // Audit history actions
         pushAuditRound: (snapshot) =>
           set((state) => {
             const rounds = [...state.auditHistory.rounds, snapshot];
@@ -201,13 +164,16 @@ const usePerfLabStore = create<PerfLabStore>()(
 
         resetAuditHistory: () =>
           set({ auditHistory: { rounds: [], currentRoundIndex: -1 } }),
+
+        setError: (error) =>
+          set({ error }),
       },
     }),
     { name: 'perf-lab-store' },
   ),
 );
 
-// ── v1 selectors ──────────────────────────────────────────────────────
+// ── Selectors ────────────────────────────────────────────────────────
 
 export const usePerfLabScreen = () =>
   usePerfLabStore(state => state.currentScreen);
@@ -236,17 +202,6 @@ export const usePerfLabCompleted = () =>
 export const usePerfLabActions = () =>
   usePerfLabStore(state => state.actions);
 
-// ── v2 selectors ──────────────────────────────────────────────────────
-
-export const usePerfLabInsightsV2 = () =>
-  usePerfLabStore(useShallow(state => state.insightsV2));
-
-export const usePerfLabTradeoffsV2 = () =>
-  usePerfLabStore(useShallow(state => state.tradeoffsV2));
-
-export const usePerfLabScoreV2 = () =>
-  usePerfLabStore(state => state.scoreV2);
-
 export const usePerfLabMetricsV2 = () =>
   usePerfLabStore(state => state.metricsV2);
 
@@ -271,8 +226,6 @@ export const usePerfLabShowReferenceDrawer = () =>
 export const usePerfLabExplorerMode = () =>
   usePerfLabStore(state => state.explorerMode);
 
-// ── Audit history selectors ──────────────────────────────────────────
-
 export const usePerfLabAuditHistory = () =>
   usePerfLabStore(useShallow(state => state.auditHistory));
 
@@ -287,3 +240,9 @@ export const usePerfLabPreviousAuditRound = () =>
     const { rounds, currentRoundIndex } = state.auditHistory;
     return currentRoundIndex > 0 ? rounds[currentRoundIndex - 1] : null;
   });
+
+export const usePerfLabError = () =>
+  usePerfLabStore(state => state.error);
+
+// ── Backward-compat aliases for callers using V2 names ───────────────
+export const usePerfLabInsightsV2 = usePerfLabInsights;

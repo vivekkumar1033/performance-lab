@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { classifyInsights } from '../insight-engine-v2';
-import type { InsightV2 } from '../../types-v2';
+import type { InsightV2 } from '../../types';
 
 function makeInsight(overrides: Partial<InsightV2> = {}): InsightV2 {
   return {

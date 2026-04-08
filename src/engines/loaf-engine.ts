@@ -5,12 +5,12 @@
  * exceeds the 50ms threshold and attributing blocking time to specific scripts.
  */
 
-import { LOAF_THRESHOLD_MS } from '../constants-v2';
+import { LOAF_THRESHOLD_MS } from '../constants';
 import type {
   LoAFEntrySimulated,
   LoAFScriptAttribution,
   ResolvedRequestV2,
-} from '../types-v2';
+} from '../types';
 
 let nextLoafId = 0;
 

@@ -8,12 +8,8 @@ import {
   usePerfLabLoading,
 } from '../store';
 import { SCENARIOS } from '../data';
-import type { PerfLabWorkerClient } from '../worker/worker-client';
+import { useWorker } from '../worker/WorkerContext';
 import type { Tradeoff } from '../types';
-
-interface TradeoffPanelProps {
-  getWorker: () => PerfLabWorkerClient;
-}
 
 const SEVERITY_CONFIG = {
   minor: {
@@ -98,7 +94,8 @@ function TradeoffCard({
   );
 }
 
-function TradeoffPanel({ getWorker }: TradeoffPanelProps) {
+function TradeoffPanel() {
+  const worker = useWorker();
   const session = usePerfLabSession();
   const scenarioId = usePerfLabScenarioId();
   const tradeoffs = usePerfLabTradeoffs();
@@ -122,7 +119,7 @@ function TradeoffPanel({ getWorker }: TradeoffPanelProps) {
     detectedRef.current = true;
 
     actions.setLoading(true);
-    getWorker()
+    worker
       .detectTradeoffs()
       .then(result => {
         actions.setTradeoffs(result);
@@ -130,7 +127,7 @@ function TradeoffPanel({ getWorker }: TradeoffPanelProps) {
       .finally(() => {
         actions.setLoading(false);
       });
-  }, [getWorker, actions, tradeoffs.length]);
+  }, [worker, actions, tradeoffs.length]);
 
   const handleContinue = useCallback(() => {
     actions.setScreen('results');

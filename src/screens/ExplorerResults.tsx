@@ -14,15 +14,11 @@ import CompareMode from '../components/CompareMode';
 import FilmstripSimulator from '../components/FilmstripSimulator';
 import IssueScorecard from '../components/IssueScorecard';
 import FieldProjectionSummary from '../components/FieldProjectionSummary';
-import type { InsightV2 } from '../types-v2';
-import type { Tradeoff } from '../types';
-import type { PerfLabWorkerClient } from '../worker/worker-client';
+import type { InsightV2, Tradeoff } from '../types';
+import { useWorker } from '../worker/WorkerContext';
 
-interface ExplorerResultsProps {
-  getWorker: () => PerfLabWorkerClient;
-}
-
-function ExplorerResults({ getWorker }: ExplorerResultsProps) {
+function ExplorerResults() {
+  const worker = useWorker();
   const session = usePerfLabSession();
   const scenarioId = usePerfLabScenarioId();
   const score = usePerfLabScore();
@@ -42,9 +38,9 @@ function ExplorerResults({ getWorker }: ExplorerResultsProps) {
 
     actions.setLoading(true);
     Promise.all([
-      getWorker().evaluate(),
-      getWorker().analyzeFull(),
-      getWorker().detectTradeoffs(),
+      worker.evaluate(),
+      worker.analyzeFull(),
+      worker.detectTradeoffs(),
     ])
       .then(([scoreResult, analysisResult, tradeoffResult]) => {
         actions.setScore(scoreResult);
@@ -56,7 +52,7 @@ function ExplorerResults({ getWorker }: ExplorerResultsProps) {
       .finally(() => {
         actions.setLoading(false);
       });
-  }, [getWorker, actions, score, scenarioId]);
+  }, [worker, actions, score, scenarioId]);
 
   // Journey summary data
   const journeySummary = useMemo(() => {

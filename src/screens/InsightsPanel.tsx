@@ -13,13 +13,8 @@ import InsightCard from '../components/InsightCard';
 import MetricCauseCard from '../components/MetricCauseCard';
 import AttributionInspector from '../components/AttributionInspector';
 import { CWV_THRESHOLDS } from '../constants';
-import type { Tradeoff } from '../types';
-import type { InsightV2 } from '../types-v2';
-import type { PerfLabWorkerClient } from '../worker/worker-client';
-
-interface InsightsPanelProps {
-  getWorker: () => PerfLabWorkerClient;
-}
+import type { InsightV2, Tradeoff } from '../types';
+import { useWorker } from '../worker/WorkerContext';
 
 // ── Collapsible section ──────────────────────────────────────────────
 
@@ -63,7 +58,8 @@ function Section({ title, count, icon, defaultOpen = false, children }: SectionP
 
 // ── Main component ───────────────────────────────────────────────────
 
-function InsightsPanel({ getWorker }: InsightsPanelProps) {
+function InsightsPanel() {
+  const worker = useWorker();
   const insights = usePerfLabInsightsV2();
   const tradeoffs = usePerfLabTradeoffs();
   const session = usePerfLabSession();
@@ -79,18 +75,17 @@ function InsightsPanel({ getWorker }: InsightsPanelProps) {
     analyzedRef.current = true;
 
     actions.setLoading(true);
-    getWorker()
+    worker
       .analyzeFull()
       .then(result => {
-        // Combine opportunities + diagnostics into the v2 insights store
-        actions.setInsightsV2([...result.opportunities, ...result.diagnostics]);
+        actions.setInsights([...result.opportunities, ...result.diagnostics]);
         actions.setTradeoffs(result.tradeoffWarnings);
         setPassedChecks(result.passedChecks);
       })
       .finally(() => {
         actions.setLoading(false);
       });
-  }, [getWorker, actions, insights.length]);
+  }, [worker, actions, insights.length]);
 
   const handleContinue = useCallback(() => {
     actions.setScreen('fix');

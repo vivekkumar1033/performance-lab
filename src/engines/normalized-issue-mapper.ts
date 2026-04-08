@@ -9,7 +9,7 @@ import type {
   NormalizedCategory,
   NormalizedPerformanceIssue,
   ParsedPSIReport,
-} from '../types-v2';
+} from '../types';
 
 let nextId = 0;
 

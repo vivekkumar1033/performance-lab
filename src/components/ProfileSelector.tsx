@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RUNTIME_PROFILES, DEFAULT_RUNTIME_PROFILE_ID } from '../constants-v2';
+import { RUNTIME_PROFILES, DEFAULT_RUNTIME_PROFILE_ID } from '../constants';
 
 interface ProfileSelectorProps {
   onProfileChange: (profileId: string) => void;

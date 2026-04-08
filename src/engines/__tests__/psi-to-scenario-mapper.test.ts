@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mapPSIToScenario } from '../psi-to-scenario-mapper';
-import type { ParsedPSIReport } from '../../types-v2';
+import type { ParsedPSIReport } from '../../types';
 
 function makeReport(overrides: Partial<ParsedPSIReport> = {}): ParsedPSIReport {
   return {

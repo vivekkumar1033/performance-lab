@@ -9,7 +9,7 @@
  * - size-adjust → reduces CLS from font swap
  */
 
-import type { FontStrategy, ResolvedRequestV2 } from '../types-v2';
+import type { FontStrategy, ResolvedRequestV2 } from '../types';
 
 /**
  * Apply a font strategy to font requests, modifying their behavior.

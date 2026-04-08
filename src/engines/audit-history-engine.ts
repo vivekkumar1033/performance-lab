@@ -5,16 +5,18 @@
  * between rounds, and enriching insights with round-aware status.
  */
 
-import type { Metrics, Score, UXState } from '../types';
 import type {
   AuditRoundDiff,
   AuditRoundSnapshot,
   FieldProjection,
   FullAnalysisResult,
   InsightStatus,
-  InsightWithStatus,
   InsightV2,
-} from '../types-v2';
+  InsightWithStatus,
+  Metrics,
+  Score,
+  UXState,
+} from '../types';
 
 // ── Snapshot creation ───────────────────────────────────────────────
 

@@ -9,18 +9,18 @@
  */
 
 import { CWV_THRESHOLDS } from '../constants';
-import { RUNTIME_PROFILES } from '../constants-v2';
+import { RUNTIME_PROFILES } from '../constants';
 import { applyRuntimeProfile } from './runtime-profile-engine';
 import { computeMetricsV2 } from './measurement-pipeline';
-import type { LCPBreakdown } from '../types';
 import type {
   FieldCohortProjection,
   FieldProjection,
+  LCPBreakdown,
   MetricsV2,
   ResolvedRequestV2,
   RuntimeProfile,
   ScenarioDefinitionV2,
-} from '../types-v2';
+} from '../types';
 
 // ── Cohort definitions ──────────────────────────────────────────────
 

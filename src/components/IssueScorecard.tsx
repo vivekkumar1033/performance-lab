@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
-import type { InsightV2 } from '../types-v2';
+import type { InsightV2 } from '../types';
 
 interface IssueScorecardProps {
   insights: InsightV2[];

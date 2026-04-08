@@ -8,7 +8,7 @@
  * that teaches how browser scheduling decisions affect performance.
  */
 
-import type { ResolvedRequestV2, SchedulerProfile } from '../types-v2';
+import type { ResolvedRequestV2, SchedulerProfile } from '../types';
 
 /**
  * Apply a scheduler profile to requests.

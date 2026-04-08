@@ -10,13 +10,13 @@
  * "basic" mode and adds "advanced" session-window mode.
  */
 
-import { CLS_SESSION_WINDOW_CONFIG } from '../constants-v2';
+import { CLS_SESSION_WINDOW_CONFIG } from '../constants';
 import type {
   CLSBreakdownV2,
   LayoutShiftAttribution,
   LayoutShiftSessionWindow,
   ResolvedRequestV2,
-} from '../types-v2';
+} from '../types';
 
 /**
  * Compute the full CLS breakdown with session windows and source categorization.

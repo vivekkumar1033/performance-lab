@@ -4,25 +4,23 @@
  */
 
 import type {
-  FixDefinition,
-  Metrics,
-  RequestDefinition,
-  ScenarioDefinition,
-} from '../types';
-import type {
   AttributionBundle,
   CLSBreakdownV2,
+  FixDefinition,
   FixDefinitionV2,
   InteractionRecord,
   LCPBreakdownV2,
   LayoutShiftAttribution,
+  Metrics,
   MetricsV2,
+  RequestDefinition,
   RequestDefinitionV2,
+  ScenarioDefinition,
   ScenarioDefinitionV2,
   ThirdPartyCategory,
   ThirdPartyMetadata,
   TransformDefinitionV2,
-} from '../types-v2';
+} from '../types';
 
 // ── Type guard ───────────────────────────────────────────────────────
 

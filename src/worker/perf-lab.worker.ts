@@ -1,72 +1,92 @@
 import { SCENARIOS } from '../data';
-import { RUNTIME_PROFILES, DEFAULT_RUNTIME_PROFILE_ID, SCHEDULER_PROFILES, DEFAULT_SCHEDULER_PROFILE_ID, BUILD_PROFILES } from '../constants-v2';
+import { RUNTIME_PROFILES, DEFAULT_RUNTIME_PROFILE_ID, SCHEDULER_PROFILES, DEFAULT_SCHEDULER_PROFILE_ID, BUILD_PROFILES } from '../constants';
 import { upgradeScenarioToV2 } from '../engines/compat-adapter';
 import { analyzeSession } from '../engines/insight-engine';
 import { analyzeSessionV2 } from '../engines/insight-engine-v2';
 import { detectPassedChecks } from '../engines/pass-check-engine';
 import { computeFieldProjection } from '../engines/field-projection-engine';
 import { loadScenario, toggleFix } from '../engines/scenario-engine';
-import { scoreSession } from '../engines/evaluation-engine';
-import { scoreSessionV2 } from '../engines/scoring-engine-v2';
+import { scoreSession, scoreSessionV2 } from '../engines/evaluation-engine';
 import { detectTradeoffs } from '../engines/tradeoff-engine';
 import { computeMetricsV2, computeAttributionBundle } from '../engines/measurement-pipeline';
 import { applyRuntimeProfile } from '../engines/runtime-profile-engine';
 import { applySchedulerProfile } from '../engines/scheduler-engine';
-import type { ScenarioDefinition, Session } from '../types';
-import type { AttributionBundle, MetricsV2, ResolvedRequestV2, ScenarioDefinitionV2 } from '../types-v2';
-import type { WorkerResponse } from './protocol';
-import type { WorkerRequestV2, WorkerResponseV2 } from './protocol-v2';
+import type { AttributionBundle, FullAnalysisResult, MetricsV2, ResolvedRequestV2, ScenarioDefinition, ScenarioDefinitionV2, Session } from '../types';
+import type { WorkerRequestV2, WorkerResponse, WorkerResponseV2 } from './protocol';
 
-let currentSession: Session | null = null;
-let currentDefinition: ScenarioDefinition | null = null;
-let currentDefinitionV2: ScenarioDefinitionV2 | null = null;
-let currentMetricsV2: MetricsV2 | null = null;
-let currentAttribution: AttributionBundle | null = null;
-let currentRuntimeProfileId: string = DEFAULT_RUNTIME_PROFILE_ID;
-let currentSchedulerProfileId: string = DEFAULT_SCHEDULER_PROFILE_ID;
+// ── Worker state ─────────────────────────────────────────────────────
 
-/**
- * Apply runtime and scheduler profiles to requests.
- * Only applied when a non-default profile is active.
- */
+interface LoadedState {
+  session: Session;
+  definition: ScenarioDefinition;
+  definitionV2: ScenarioDefinitionV2;
+  metricsV2: MetricsV2;
+  attribution: AttributionBundle;
+}
+
+let session: Session | null = null;
+let definition: ScenarioDefinition | null = null;
+let definitionV2: ScenarioDefinitionV2 | null = null;
+let metricsV2: MetricsV2 | null = null;
+let attribution: AttributionBundle | null = null;
+let runtimeProfileId: string = DEFAULT_RUNTIME_PROFILE_ID;
+let schedulerProfileId: string = DEFAULT_SCHEDULER_PROFILE_ID;
+
+function requireLoaded(): LoadedState {
+  if (!session || !definition || !definitionV2 || !metricsV2 || !attribution) {
+    throw new Error('No scenario loaded');
+  }
+  return { session, definition, definitionV2, metricsV2, attribution };
+}
+
 function applyProfiles(requests: ResolvedRequestV2[]): ResolvedRequestV2[] {
   let result = requests;
-
-  const runtimeProfile = RUNTIME_PROFILES[currentRuntimeProfileId];
-  if (runtimeProfile && currentRuntimeProfileId !== DEFAULT_RUNTIME_PROFILE_ID) {
-    result = applyRuntimeProfile(result, runtimeProfile);
+  const rp = RUNTIME_PROFILES[runtimeProfileId];
+  if (rp && runtimeProfileId !== DEFAULT_RUNTIME_PROFILE_ID) {
+    result = applyRuntimeProfile(result, rp);
   }
-
-  const schedulerProfile = SCHEDULER_PROFILES[currentSchedulerProfileId];
-  if (schedulerProfile && currentSchedulerProfileId !== DEFAULT_SCHEDULER_PROFILE_ID) {
-    result = applySchedulerProfile(result, schedulerProfile);
+  const sp = SCHEDULER_PROFILES[schedulerProfileId];
+  if (sp && schedulerProfileId !== DEFAULT_SCHEDULER_PROFILE_ID) {
+    result = applySchedulerProfile(result, sp);
   }
-
   return result;
 }
 
-/**
- * Recompute v2 metrics and attribution for the current session state.
- */
 function recomputeV2(preloads: string[]) {
-  if (!currentSession || !currentDefinition || !currentDefinitionV2) return;
-
-  const profiledRequests = applyProfiles(currentSession.requests as ResolvedRequestV2[]);
-
-  currentMetricsV2 = computeMetricsV2(
-    profiledRequests,
-    currentDefinition.lcpBreakdown,
-    currentDefinitionV2,
-    preloads,
-  );
-  currentAttribution = computeAttributionBundle(
-    profiledRequests,
-    currentDefinition.lcpBreakdown,
-    currentDefinitionV2,
-    preloads,
-    currentSession.currentMetrics.fcp,
-  );
+  if (!session || !definition || !definitionV2) return;
+  const profiled = applyProfiles(session.requests as ResolvedRequestV2[]);
+  metricsV2 = computeMetricsV2(profiled, definition.lcpBreakdown, definitionV2, preloads);
+  attribution = computeAttributionBundle(profiled, definition.lcpBreakdown, definitionV2, preloads, session.currentMetrics.fcp);
 }
+
+// ── Shared analysis pipeline ─────────────────────────────────────────
+
+function runFullAnalysis(s: LoadedState): FullAnalysisResult {
+  const insights = analyzeSessionV2(
+    s.session, s.definitionV2, s.metricsV2,
+    s.attribution.lcpBreakdown, s.attribution.loafEntries,
+    s.attribution.interactions, s.attribution.clsBreakdown,
+    s.session.requests as ResolvedRequestV2[],
+  );
+  const passedChecks = detectPassedChecks(
+    s.metricsV2, s.attribution.lcpBreakdown,
+    s.attribution.loafEntries, s.attribution.interactions,
+    s.attribution.clsBreakdown, s.session.requests as ResolvedRequestV2[],
+  );
+  const activeFixDefs = s.definition.fixes.filter(f => s.session.activeFixes.includes(f.id));
+  const tradeoffs = detectTradeoffs(
+    s.session.baselineMetrics, s.session.currentMetrics,
+    s.session.baselineUXState, s.session.currentUXState, activeFixDefs,
+  );
+  return {
+    opportunities: insights.filter(i => i.bucket === 'opportunity'),
+    diagnostics: insights.filter(i => i.bucket === 'diagnostic'),
+    passedChecks,
+    tradeoffWarnings: tradeoffs,
+  };
+}
+
+// ── Message handler ──────────────────────────────────────────────────
 
 function respond(msg: WorkerResponse | WorkerResponseV2) {
   self.postMessage(msg);
@@ -77,322 +97,154 @@ self.onmessage = (event: MessageEvent<WorkerRequestV2>) => {
 
   try {
     switch (event.data.type) {
-      // ── v1 handlers (unchanged behavior) ─────────────────────────
-
       case 'load-scenario': {
         const def = SCENARIOS[event.data.scenarioId];
         if (!def) {
           respond({ correlationId, type: 'error', message: `Unknown scenario: ${event.data.scenarioId}` });
           return;
         }
-        currentDefinition = def;
-        currentDefinitionV2 = upgradeScenarioToV2(def);
-        currentSession = loadScenario(def);
-        currentRuntimeProfileId = DEFAULT_RUNTIME_PROFILE_ID;
-        currentSchedulerProfileId = DEFAULT_SCHEDULER_PROFILE_ID;
+        definition = def;
+        definitionV2 = upgradeScenarioToV2(def);
+        session = loadScenario(def);
+        runtimeProfileId = DEFAULT_RUNTIME_PROFILE_ID;
+        schedulerProfileId = DEFAULT_SCHEDULER_PROFILE_ID;
         recomputeV2(def.preloads ?? []);
-        respond({ correlationId, type: 'scenario-loaded', session: currentSession });
+        respond({ correlationId, type: 'scenario-loaded', session });
         break;
       }
 
       case 'toggle-fix': {
-        if (!currentSession || !currentDefinition || !currentDefinitionV2) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
-        currentSession = toggleFix(currentSession, currentDefinition, event.data.fixId);
-        recomputeV2(currentSession.currentTimeline.preloads);
-        respond({ correlationId, type: 'fix-toggled', session: currentSession });
+        const s = requireLoaded();
+        session = toggleFix(s.session, s.definition, event.data.fixId);
+        recomputeV2(session.currentTimeline.preloads);
+        respond({ correlationId, type: 'fix-toggled', session });
         break;
       }
 
       case 'analyze': {
-        if (!currentSession || !currentDefinition) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
-        const metrics = currentSession.currentMetrics;
-        const lcpBreakdown = currentSession.currentTimeline.lcpBreakdown;
-        const insights = analyzeSession(currentSession, currentDefinition, metrics, lcpBreakdown);
+        const s = requireLoaded();
+        const metrics = s.session.currentMetrics;
+        const lcpBreakdown = s.session.currentTimeline.lcpBreakdown;
+        const insights = analyzeSession(s.session, s.definition, metrics, lcpBreakdown);
         respond({ correlationId, type: 'insights-ready', insights });
         break;
       }
 
       case 'evaluate': {
-        if (!currentSession) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
-        const score = scoreSession(currentSession.baselineMetrics, currentSession.currentMetrics, currentSession.currentUXState);
+        const s = requireLoaded();
+        const score = scoreSession(s.session.baselineMetrics, s.session.currentMetrics, s.session.currentUXState);
         respond({ correlationId, type: 'evaluation-ready', score });
         break;
       }
 
       case 'detect-tradeoffs': {
-        if (!currentSession || !currentDefinition) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
-        const activeFixDefs = currentDefinition.fixes.filter(f => currentSession!.activeFixes.includes(f.id));
+        const s = requireLoaded();
+        const activeFixDefs = s.definition.fixes.filter(f => s.session.activeFixes.includes(f.id));
         const tradeoffs = detectTradeoffs(
-          currentSession.baselineMetrics,
-          currentSession.currentMetrics,
-          currentSession.baselineUXState,
-          currentSession.currentUXState,
-          activeFixDefs,
+          s.session.baselineMetrics, s.session.currentMetrics,
+          s.session.baselineUXState, s.session.currentUXState, activeFixDefs,
         );
         respond({ correlationId, type: 'tradeoffs-ready', tradeoffs });
         break;
       }
 
-      // ── v2 handlers (stubs delegating to v1 for now) ─────────────
-
       case 'analyze-v2': {
-        if (!currentSession || !currentDefinitionV2 || !currentMetricsV2 || !currentAttribution) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
+        const s = requireLoaded();
         const v2Insights = analyzeSessionV2(
-          currentSession,
-          currentDefinitionV2,
-          currentMetricsV2,
-          currentAttribution.lcpBreakdown,
-          currentAttribution.loafEntries,
-          currentAttribution.interactions,
-          currentAttribution.clsBreakdown,
-          currentSession.requests as ResolvedRequestV2[],
+          s.session, s.definitionV2, s.metricsV2,
+          s.attribution.lcpBreakdown, s.attribution.loafEntries,
+          s.attribution.interactions, s.attribution.clsBreakdown,
+          s.session.requests as ResolvedRequestV2[],
         );
         respond({ correlationId, type: 'insights-v2-ready', insights: v2Insights });
         break;
       }
 
       case 'analyze-full': {
-        if (!currentSession || !currentDefinition || !currentDefinitionV2 || !currentMetricsV2 || !currentAttribution) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
-        // Run v2 insight analysis
-        const fullInsights = analyzeSessionV2(
-          currentSession,
-          currentDefinitionV2,
-          currentMetricsV2,
-          currentAttribution.lcpBreakdown,
-          currentAttribution.loafEntries,
-          currentAttribution.interactions,
-          currentAttribution.clsBreakdown,
-          currentSession.requests as ResolvedRequestV2[],
-        );
-        // Run passed checks
-        const passedChecks = detectPassedChecks(
-          currentMetricsV2,
-          currentAttribution.lcpBreakdown,
-          currentAttribution.loafEntries,
-          currentAttribution.interactions,
-          currentAttribution.clsBreakdown,
-          currentSession.requests as ResolvedRequestV2[],
-        );
-        // Run tradeoff detection
-        const activeFixDefs2 = currentDefinition.fixes.filter(f => currentSession!.activeFixes.includes(f.id));
-        const tradeoffWarnings = detectTradeoffs(
-          currentSession.baselineMetrics,
-          currentSession.currentMetrics,
-          currentSession.baselineUXState,
-          currentSession.currentUXState,
-          activeFixDefs2,
-        );
-        // Bucket the insights
-        const opportunities = fullInsights.filter(i => i.bucket === 'opportunity');
-        const diagnostics = fullInsights.filter(i => i.bucket === 'diagnostic');
-        respond({
-          correlationId,
-          type: 'full-analysis-ready',
-          result: { opportunities, diagnostics, passedChecks, tradeoffWarnings },
-        });
+        const s = requireLoaded();
+        respond({ correlationId, type: 'full-analysis-ready', result: runFullAnalysis(s) });
         break;
       }
 
       case 'audit-full-snapshot': {
-        if (!currentSession || !currentDefinition || !currentDefinitionV2 || !currentMetricsV2 || !currentAttribution) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
-        // Run v2 insight analysis
-        const snapshotInsights = analyzeSessionV2(
-          currentSession,
-          currentDefinitionV2,
-          currentMetricsV2,
-          currentAttribution.lcpBreakdown,
-          currentAttribution.loafEntries,
-          currentAttribution.interactions,
-          currentAttribution.clsBreakdown,
-          currentSession.requests as ResolvedRequestV2[],
-        );
-        // Run passed checks
-        const snapshotPassedChecks = detectPassedChecks(
-          currentMetricsV2,
-          currentAttribution.lcpBreakdown,
-          currentAttribution.loafEntries,
-          currentAttribution.interactions,
-          currentAttribution.clsBreakdown,
-          currentSession.requests as ResolvedRequestV2[],
-        );
-        // Run tradeoff detection
-        const snapshotActiveFixDefs = currentDefinition.fixes.filter(f => currentSession!.activeFixes.includes(f.id));
-        const snapshotTradeoffs = detectTradeoffs(
-          currentSession.baselineMetrics,
-          currentSession.currentMetrics,
-          currentSession.baselineUXState,
-          currentSession.currentUXState,
-          snapshotActiveFixDefs,
-        );
-        // Bucket the insights
-        const snapshotOpportunities = snapshotInsights.filter(i => i.bucket === 'opportunity');
-        const snapshotDiagnostics = snapshotInsights.filter(i => i.bucket === 'diagnostic');
-        // Score
-        const snapshotScore = scoreSession(currentSession.baselineMetrics, currentSession.currentMetrics, currentSession.currentUXState);
-        // Field projection
-        const snapshotProfiledReqs = applyProfiles(currentSession.requests as ResolvedRequestV2[]);
-        const snapshotFieldProjection = computeFieldProjection(
-          snapshotProfiledReqs,
-          currentDefinition.lcpBreakdown,
-          currentDefinitionV2,
-          currentSession.currentTimeline.preloads,
+        const s = requireLoaded();
+        const analysis = runFullAnalysis(s);
+        const score = scoreSession(s.session.baselineMetrics, s.session.currentMetrics, s.session.currentUXState);
+        const profiled = applyProfiles(s.session.requests as ResolvedRequestV2[]);
+        const fieldProjection = computeFieldProjection(
+          profiled, s.definition.lcpBreakdown,
+          s.definitionV2, s.session.currentTimeline.preloads,
         );
         respond({
           correlationId,
           type: 'audit-full-snapshot-ready',
-          result: {
-            analysis: {
-              opportunities: snapshotOpportunities,
-              diagnostics: snapshotDiagnostics,
-              passedChecks: snapshotPassedChecks,
-              tradeoffWarnings: snapshotTradeoffs,
-            },
-            score: snapshotScore,
-            fieldProjection: snapshotFieldProjection,
-            metrics: currentSession.currentMetrics,
-            uxState: currentSession.currentUXState,
-          },
+          result: { analysis, score, fieldProjection, metrics: s.session.currentMetrics, uxState: s.session.currentUXState },
         });
         break;
       }
 
       case 'compute-field-projection': {
-        if (!currentSession || !currentDefinition || !currentDefinitionV2) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
-        const profiledReqs = applyProfiles(currentSession.requests as ResolvedRequestV2[]);
+        const s = requireLoaded();
+        const profiled = applyProfiles(s.session.requests as ResolvedRequestV2[]);
         const projection = computeFieldProjection(
-          profiledReqs,
-          currentDefinition.lcpBreakdown,
-          currentDefinitionV2,
-          currentSession.currentTimeline.preloads,
+          profiled, s.definition.lcpBreakdown,
+          s.definitionV2, s.session.currentTimeline.preloads,
         );
         respond({ correlationId, type: 'field-projection-ready', projection });
         break;
       }
 
       case 'evaluate-v2': {
-        if (!currentSession || !currentMetricsV2 || !currentDefinitionV2) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
+        const s = requireLoaded();
         const baselineV2 = computeMetricsV2(
-          currentSession.requests as ResolvedRequestV2[],
-          currentDefinition!.lcpBreakdown,
-          currentDefinitionV2,
-          currentDefinition!.preloads ?? [],
+          s.session.requests as ResolvedRequestV2[],
+          s.definition.lcpBreakdown, s.definitionV2,
+          s.definition.preloads ?? [],
         );
         const v2Score = scoreSessionV2(
-          baselineV2,
-          currentMetricsV2,
-          currentSession.currentUXState,
-          currentDefinitionV2.learningObjectives,
-          currentSession.activeFixes,
+          baselineV2, s.metricsV2, s.session.currentUXState,
+          s.definitionV2.learningObjectives, s.session.activeFixes,
         );
-        respond({
-          correlationId,
-          type: 'evaluation-v2-ready',
-          score: v2Score,
-        });
+        respond({ correlationId, type: 'evaluation-v2-ready', score: v2Score });
         break;
       }
 
       case 'set-build-profile': {
-        if (!currentSession) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
+        const s = requireLoaded();
+        if (!BUILD_PROFILES[event.data.buildProfileId]) {
+          respond({ correlationId, type: 'error', message: `Unknown build profile: ${event.data.buildProfileId}` });
           return;
         }
-        const buildProfileId = event.data.buildProfileId;
-        if (!BUILD_PROFILES[buildProfileId]) {
-          respond({ correlationId, type: 'error', message: `Unknown build profile: ${buildProfileId}` });
-          return;
-        }
-        // Build profile application will be implemented in Phase 3 of v2 PRD
-        // For now, acknowledge the change
-        recomputeV2(currentSession.currentTimeline.preloads);
-        respond({
-          correlationId,
-          type: 'scenario-loaded-v2',
-          session: currentSession,
-          metricsV2: currentMetricsV2!,
-        });
+        recomputeV2(s.session.currentTimeline.preloads);
+        respond({ correlationId, type: 'scenario-loaded-v2', session: s.session, metricsV2: metricsV2! });
         break;
       }
 
       case 'clone-to-comparison-run': {
-        if (!currentSession) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
-        // Clone current run state for comparison — the comparison state is stored client-side
-        respond({
-          correlationId,
-          type: 'scenario-loaded-v2',
-          session: currentSession,
-          metricsV2: currentMetricsV2!,
-        });
+        const s = requireLoaded();
+        respond({ correlationId, type: 'scenario-loaded-v2', session: s.session, metricsV2: s.metricsV2 });
         break;
       }
 
       case 'reset-run': {
-        if (!currentSession || !currentDefinition) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
-          return;
-        }
-        currentSession = loadScenario(currentDefinition);
-        currentRuntimeProfileId = DEFAULT_RUNTIME_PROFILE_ID;
-        currentSchedulerProfileId = DEFAULT_SCHEDULER_PROFILE_ID;
-        recomputeV2(currentDefinition.preloads ?? []);
-        respond({
-          correlationId,
-          type: 'scenario-loaded-v2',
-          session: currentSession,
-          metricsV2: currentMetricsV2!,
-        });
+        const s = requireLoaded();
+        session = loadScenario(s.definition);
+        runtimeProfileId = DEFAULT_RUNTIME_PROFILE_ID;
+        schedulerProfileId = DEFAULT_SCHEDULER_PROFILE_ID;
+        recomputeV2(s.definition.preloads ?? []);
+        respond({ correlationId, type: 'scenario-loaded-v2', session: session, metricsV2: metricsV2! });
         break;
       }
 
       case 'set-runtime-profile': {
-        if (!currentSession) {
-          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
+        const s = requireLoaded();
+        if (!RUNTIME_PROFILES[event.data.profileId]) {
+          respond({ correlationId, type: 'error', message: `Unknown runtime profile: ${event.data.profileId}` });
           return;
         }
-        const profileId = event.data.profileId;
-        if (!RUNTIME_PROFILES[profileId]) {
-          respond({ correlationId, type: 'error', message: `Unknown runtime profile: ${profileId}` });
-          return;
-        }
-        currentRuntimeProfileId = profileId;
-        recomputeV2(currentSession.currentTimeline.preloads);
-        // Respond with updated v2 metrics
-        respond({
-          correlationId,
-          type: 'scenario-loaded-v2',
-          session: currentSession,
-          metricsV2: currentMetricsV2!,
-        });
+        runtimeProfileId = event.data.profileId;
+        recomputeV2(s.session.currentTimeline.preloads);
+        respond({ correlationId, type: 'scenario-loaded-v2', session: s.session, metricsV2: metricsV2! });
         break;
       }
     }

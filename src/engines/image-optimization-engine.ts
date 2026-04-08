@@ -11,12 +11,12 @@ import {
   IMAGE_FORMAT_SAVINGS,
   IMAGE_OVERSIZE_THRESHOLD,
   IMAGE_RESIZE_QUALITY_FACTOR,
-} from '../constants-v2';
+} from '../constants';
 import type {
   ImageMetadata,
   ImageOptimizationImpact,
   ResolvedRequestV2,
-} from '../types-v2';
+} from '../types';
 
 /**
  * Calculate how oversized an image is relative to its display dimensions.

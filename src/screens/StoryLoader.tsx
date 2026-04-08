@@ -5,13 +5,10 @@ import {
   usePerfLabScenarioId,
 } from '../store';
 import { SCENARIOS } from '../data';
-import type { PerfLabWorkerClient } from '../worker/worker-client';
+import { useWorker } from '../worker/WorkerContext';
 
-interface StoryLoaderProps {
-  getWorker: () => PerfLabWorkerClient;
-}
-
-function StoryLoader({ getWorker }: StoryLoaderProps) {
+function StoryLoader() {
+  const worker = useWorker();
   const scenarioId = usePerfLabScenarioId();
   const actions = usePerfLabActions();
   const [workerReady, setWorkerReady] = useState(false);
@@ -25,7 +22,7 @@ function StoryLoader({ getWorker }: StoryLoaderProps) {
     loadedRef.current = true;
 
     actions.setLoading(true);
-    getWorker()
+    worker
       .loadScenario(scenarioId)
       .then(session => {
         actions.setSession(session);
@@ -34,7 +31,7 @@ function StoryLoader({ getWorker }: StoryLoaderProps) {
       .finally(() => {
         actions.setLoading(false);
       });
-  }, [scenarioId, getWorker, actions]);
+  }, [scenarioId, worker, actions]);
 
   const handleContinue = useCallback(() => {
     actions.setScreen('timeline');

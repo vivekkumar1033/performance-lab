@@ -1,12 +1,16 @@
-import { CWV_THRESHOLDS, GRADE_THRESHOLDS } from '../constants';
+import { CWV_THRESHOLDS, GRADE_THRESHOLDS, SCORE_V2_WEIGHTS } from '../constants';
 import type {
   LCPBreakdown,
+  LearningObjective,
+  LearningObjectiveResult,
   Metrics,
   MetricsDelta,
+  MetricsV2,
   PerformanceTimeline,
   ResolvedRequest,
   Score,
   ScoreBreakdownItem,
+  ScoreV2,
   UXState,
 } from '../types';
 
@@ -230,4 +234,119 @@ export function scoreSession(_before: Metrics, after: Metrics, uxState: UXState)
   ];
 
   return { value, grade, breakdown, cwvScore, labScore, uxScore, isWin };
+}
+
+// ── V2 scoring with learning objectives ──────────────────────────────
+
+interface ScorePenalty {
+  type: string;
+  amount: number;
+  reason: string;
+}
+
+export function scoreSessionV2(
+  before: MetricsV2,
+  after: MetricsV2,
+  uxState: UXState,
+  objectives: LearningObjective[],
+  activeFixes: string[],
+): ScoreV2 {
+  const lcpScore = metricScore(after.lcp, CWV_THRESHOLDS.lcp);
+  const inpScore = metricScore(after.inp, CWV_THRESHOLDS.inp);
+  const clsScore = metricScore(after.cls, CWV_THRESHOLDS.cls);
+  const tbtScore = metricScore(after.tbt, CWV_THRESHOLDS.tbt);
+  const siScore = metricScore(after.si, CWV_THRESHOLDS.si);
+
+  const cwvScore = Math.round(lcpScore * 0.40 + inpScore * 0.30 + clsScore * 0.30);
+  const labScore = Math.round(tbtScore * 0.50 + siScore * 0.50);
+  const uxScore = Math.round(
+    (uxState.contentVisibility + uxState.featureAvailability + uxState.perceivedSpeed) / 3,
+  );
+
+  const objectiveResults = evaluateObjectives(objectives, after, activeFixes);
+  const achievedCount = objectiveResults.filter(r => r.achieved).length;
+  const learningScore = objectives.length > 0
+    ? Math.round((achievedCount / objectives.length) * 100)
+    : 50;
+
+  const penalties = detectPenalties(before, after, uxState);
+  const totalPenalty = penalties.reduce((sum, p) => sum + p.amount, 0);
+
+  const rawScore = Math.round(
+    cwvScore * SCORE_V2_WEIGHTS.cwv +
+    labScore * SCORE_V2_WEIGHTS.lab +
+    uxScore * SCORE_V2_WEIGHTS.ux +
+    learningScore * SCORE_V2_WEIGHTS.learning,
+  );
+
+  const value = Math.max(0, Math.min(100, rawScore - totalPenalty));
+  const grade = GRADE_THRESHOLDS.find(t => value >= t.min)?.grade ?? 'F';
+  const isWin = value > 85 && uxScore > 70;
+
+  const breakdown: ScoreBreakdownItem[] = [
+    { metricName: 'lcp', rawValue: after.lcp, threshold: CWV_THRESHOLDS.lcp, score: lcpScore, weight: 0.20, contribution: lcpScore * 0.20 },
+    { metricName: 'inp', rawValue: after.inp, threshold: CWV_THRESHOLDS.inp, score: inpScore, weight: 0.15, contribution: inpScore * 0.15 },
+    { metricName: 'cls', rawValue: after.cls, threshold: CWV_THRESHOLDS.cls, score: clsScore, weight: 0.15, contribution: clsScore * 0.15 },
+    { metricName: 'tbt', rawValue: after.tbt, threshold: CWV_THRESHOLDS.tbt, score: tbtScore, weight: 0.075, contribution: tbtScore * 0.075 },
+    { metricName: 'si', rawValue: after.si, threshold: CWV_THRESHOLDS.si, score: siScore, weight: 0.075, contribution: siScore * 0.075 },
+    { metricName: 'ux', rawValue: uxScore, threshold: 100, score: uxScore, weight: 0.20, contribution: uxScore * 0.20 },
+    { metricName: 'learning', rawValue: learningScore, threshold: 100, score: learningScore, weight: 0.15, contribution: learningScore * 0.15 },
+  ];
+
+  return { value, grade, breakdown, cwvScore, labScore, uxScore, isWin, learningScore, objectiveResults };
+}
+
+function evaluateObjectives(
+  objectives: LearningObjective[],
+  metrics: MetricsV2,
+  activeFixes: string[],
+): LearningObjectiveResult[] {
+  return objectives.map(obj => {
+    let achieved = true;
+
+    if (obj.requiredFixIds && obj.requiredFixIds.length > 0) {
+      if (!obj.requiredFixIds.every(id => activeFixes.includes(id))) achieved = false;
+    }
+    if (obj.forbiddenFixIds && obj.forbiddenFixIds.length > 0) {
+      if (obj.forbiddenFixIds.some(id => activeFixes.includes(id))) achieved = false;
+    }
+    for (const metric of obj.metricFocus) {
+      const threshold = CWV_THRESHOLDS[metric as keyof typeof CWV_THRESHOLDS];
+      if (threshold === undefined) continue;
+      const value = metrics[metric as keyof MetricsV2] as number;
+      if (typeof value === 'number' && value > threshold) achieved = false;
+    }
+
+    return {
+      objectiveId: obj.id,
+      title: obj.title,
+      achieved,
+      contribution: achieved ? 100 / Math.max(1, objectives.length) : 0,
+    };
+  });
+}
+
+function detectPenalties(before: MetricsV2, after: MetricsV2, uxState: UXState): ScorePenalty[] {
+  const penalties: ScorePenalty[] = [];
+
+  if (uxState.featureAvailability < 50) {
+    penalties.push({ type: 'ux-degradation', amount: 15, reason: `Feature availability dropped to ${uxState.featureAvailability}%` });
+  } else if (uxState.featureAvailability < 70) {
+    penalties.push({ type: 'ux-degradation', amount: 5, reason: `Feature availability is ${uxState.featureAvailability}%` });
+  }
+
+  if (after.lcp < before.lcp * 0.7 && after.cls > before.cls + 0.15) {
+    penalties.push({ type: 'metric-masking', amount: 10, reason: 'LCP improved but CLS severely regressed' });
+  }
+  if (after.fcp < before.fcp * 0.7 && after.inp > before.inp * 1.5) {
+    penalties.push({ type: 'metric-masking', amount: 10, reason: 'FCP improved but INP severely regressed' });
+  }
+  if (uxState.contentVisibility < 60) {
+    penalties.push({ type: 'content-hidden', amount: 8, reason: `Content visibility is only ${uxState.contentVisibility}%` });
+  }
+  if (uxState.perceivedSpeed < 40) {
+    penalties.push({ type: 'perceived-slow', amount: 5, reason: `Perceived speed is ${uxState.perceivedSpeed}%` });
+  }
+
+  return penalties;
 }

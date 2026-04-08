@@ -12,7 +12,7 @@
 import type {
   InteractionRecord,
   LoAFEntrySimulated,
-} from '../types-v2';
+} from '../types';
 
 export interface INPBreakdownResult {
   worstInteraction: InteractionRecord;

@@ -14,7 +14,7 @@
  * - Main-thread contention windows (adds delay to scripts in busy periods)
  */
 
-import type { RuntimeProfile, ResolvedRequestV2 } from '../types-v2';
+import type { RuntimeProfile, ResolvedRequestV2 } from '../types';
 
 const DEFAULT_BANDWIDTH_KBPS = 10_000;
 const DEFAULT_RTT_MS = 40;

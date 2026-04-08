@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Globe, CheckCircle2, XCircle } from 'lucide-react';
 import { CWV_THRESHOLDS } from '../constants';
 import { formatMs } from '../lib/format';
-import type { FieldProjection } from '../types-v2';
+import type { FieldProjection } from '../types';
 
 interface FieldProjectionSummaryProps {
   projection: FieldProjection;

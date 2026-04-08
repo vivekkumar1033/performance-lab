@@ -13,14 +13,14 @@ import { computeLCPBreakdownV2 } from './lcp-attribution-engine';
 import { computeCLSBreakdownV2 } from './cls-engine-v2';
 import { applyThirdPartyPenalties } from './third-party-engine';
 import { synthesizeInteractions, upgradeMetricsToV2 } from './compat-adapter';
-import type { LCPBreakdown } from '../types';
 import type {
   AttributionBundle,
   InteractionRecord,
+  LCPBreakdown,
   MetricsV2,
   ResolvedRequestV2,
   ScenarioDefinitionV2,
-} from '../types-v2';
+} from '../types';
 
 /**
  * Compute full v2 metrics by enriching v1 metrics with attribution data.

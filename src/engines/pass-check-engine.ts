@@ -6,7 +6,7 @@
  */
 
 import { CWV_THRESHOLDS } from '../constants';
-import { INP_SUB_PHASE_THRESHOLDS, IMAGE_OVERSIZE_THRESHOLD } from '../constants-v2';
+import { INP_SUB_PHASE_THRESHOLDS, IMAGE_OVERSIZE_THRESHOLD } from '../constants';
 import { computeThirdPartyImpact } from './third-party-engine';
 import { calculateOversizeRatio } from './image-optimization-engine';
 import type {
@@ -19,7 +19,7 @@ import type {
   MetricsV2,
   NormalizedCategory,
   ResolvedRequestV2,
-} from '../types-v2';
+} from '../types';
 
 let nextPassId = 0;
 

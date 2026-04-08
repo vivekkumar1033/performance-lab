@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { formatMs } from '../lib/format';
-import type { InsightV2 } from '../types-v2';
+import type { InsightV2 } from '../types';
 
 interface MetricCauseCardProps {
   metric: 'lcp' | 'fcp' | 'inp' | 'cls' | 'tbt' | 'si';

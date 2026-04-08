@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { formatMs, formatCLS } from '../lib/format';
 import { CWV_THRESHOLDS } from '../constants';
-import type { FieldProjection } from '../types-v2';
+import type { FieldProjection } from '../types';
 
 interface CohortAttributionProps {
   projection: FieldProjection;

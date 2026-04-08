@@ -8,13 +8,13 @@
  * - candidateSwitches: when the LCP element changes during load
  */
 
-import type { LCPBreakdown } from '../types';
 import type {
   BlockingContributor,
+  LCPBreakdown,
   LCPBreakdownV2,
   LCPCandidateSwitch,
   ResolvedRequestV2,
-} from '../types-v2';
+} from '../types';
 
 /**
  * Compute the full v2 LCP breakdown with attribution data.

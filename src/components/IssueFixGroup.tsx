@@ -1,7 +1,6 @@
 import { memo } from 'react';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
-import type { FixDefinition } from '../types';
-import type { InsightV2 } from '../types-v2';
+import type { FixDefinition, InsightV2 } from '../types';
 
 interface IssueFixGroupProps {
   insight: InsightV2;

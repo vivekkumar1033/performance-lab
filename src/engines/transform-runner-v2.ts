@@ -5,8 +5,8 @@
  * Works alongside the existing applyTransforms in scenario-engine.ts.
  */
 
-import { COMPRESSION_RATIOS, IMAGE_FORMAT_SAVINGS, IMAGE_RESIZE_QUALITY_FACTOR } from '../constants-v2';
-import type { ImageMetadata, ResolvedRequestV2, TransformDefinitionV2 } from '../types-v2';
+import { COMPRESSION_RATIOS, IMAGE_FORMAT_SAVINGS, IMAGE_RESIZE_QUALITY_FACTOR } from '../constants';
+import type { ImageMetadata, ResolvedRequestV2, TransformDefinitionV2 } from '../types';
 
 /**
  * Apply a single v2 transform to requests.

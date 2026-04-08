@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import type { ReactNode, ComponentType } from 'react';
 import DefaultLayout from './layouts/DefaultLayout';
 import {
@@ -11,10 +11,11 @@ import {
 } from './store';
 import { SCREENS, SCREEN_LABELS } from './constants';
 import { SCENARIOS } from './data';
-import { PerfLabWorkerClient } from './worker/worker-client';
+import { WorkerProvider } from './worker/WorkerContext';
 import FieldLabToggle from './components/FieldLabToggle';
 import PSIReferenceDrawer from './components/PSIReferenceDrawer';
 import ExplorerSidebar from './components/ExplorerSidebar';
+import ErrorBanner from './components/ErrorBanner';
 import type { Screen } from './types';
 import ScenarioGrid from './screens/ScenarioGrid';
 import StoryLoader from './screens/StoryLoader';
@@ -104,23 +105,6 @@ export default function PerfLabApp({ Layout = DefaultLayout }: PerfLabAppProps) 
   const psiReport = usePerfLabPSIReport();
   const showRefDrawer = usePerfLabShowReferenceDrawer();
   const explorerMode = usePerfLabExplorerMode();
-  const workerRef = useRef<PerfLabWorkerClient | null>(null);
-
-  // Initialize worker
-  useEffect(() => {
-    workerRef.current = new PerfLabWorkerClient();
-    return () => {
-      workerRef.current?.dispose();
-      workerRef.current = null;
-    };
-  }, []);
-
-  const getWorker = useCallback(() => {
-    if (!workerRef.current) {
-      workerRef.current = new PerfLabWorkerClient();
-    }
-    return workerRef.current;
-  }, []);
 
   const handleNavigate = useCallback((screen: Screen) => {
     actions.setScreen(screen);
@@ -131,67 +115,77 @@ export default function PerfLabApp({ Layout = DefaultLayout }: PerfLabAppProps) 
       case 'grid':
         return <ScenarioGrid />;
       case 'story':
-        return <StoryLoader getWorker={getWorker} />;
+        return <StoryLoader />;
       case 'timeline':
         return <TimelineView />;
       case 'lcp-breakdown':
         return <LCPBreakdownView />;
       case 'insights':
-        return <InsightsPanel getWorker={getWorker} />;
+        return <InsightsPanel />;
       case 'fix':
-        return <FixSimulator getWorker={getWorker} />;
+        return <FixSimulator />;
       case 'tradeoffs':
-        return <TradeoffPanel getWorker={getWorker} />;
+        return <TradeoffPanel />;
       case 'results':
-        return <ResultsScore getWorker={getWorker} />;
+        return <ResultsScore />;
       case 'explorer-briefing':
-        return <ExplorerBriefing getWorker={getWorker} />;
+        return <ExplorerBriefing />;
       case 'explorer':
-        return <ExplorerWorkspace getWorker={getWorker} />;
+        return <ExplorerWorkspace />;
       case 'explorer-results':
-        return <ExplorerResults getWorker={getWorker} />;
+        return <ExplorerResults />;
     }
-  }, [currentScreen, getWorker]);
+  }, [currentScreen]);
 
   return (
-    <Layout
-      sidebarWidth={200}
-      sidebar={
-        explorerMode && currentScreen === 'explorer' ? (
-          <ExplorerSidebar />
-        ) : (
-          <div className="flex flex-col h-full">
-            <SidebarProgress
-              currentScreen={currentScreen}
-              scenarioId={scenarioId}
-              onNavigate={handleNavigate}
-            />
-            {currentScreen !== 'grid' && currentScreen !== 'story' && currentScreen !== 'explorer-briefing' && currentScreen !== 'explorer-results' && (
-              <div className="mt-auto p-3 border-t border-surface-card-border space-y-3">
-                <div>
-                  <p className="text-[9px] uppercase tracking-wider text-text-secondary/60 mb-2">View Mode</p>
-                  <FieldLabToggle />
+    <WorkerProvider>
+      <Layout
+        sidebarWidth={200}
+        sidebar={
+          explorerMode && currentScreen === 'explorer' ? (
+            <ExplorerSidebar />
+          ) : (
+            <div className="flex flex-col h-full">
+              <SidebarProgress
+                currentScreen={currentScreen}
+                scenarioId={scenarioId}
+                onNavigate={handleNavigate}
+              />
+              {currentScreen !== 'grid' && currentScreen !== 'story' && currentScreen !== 'explorer-briefing' && currentScreen !== 'explorer-results' && (
+                <div className="mt-auto p-3 border-t border-surface-card-border space-y-3">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-wider text-text-secondary/60 mb-2">View Mode</p>
+                    <FieldLabToggle />
+                  </div>
+                  {psiReport && (
+                    <button
+                      onClick={() => actions.toggleReferenceDrawer()}
+                      className="w-full rounded-md border border-surface-card-border px-2 py-1.5 text-[11px] text-text-secondary hover:bg-surface-hover transition-colors"
+                    >
+                      {showRefDrawer ? 'Hide' : 'Show'} PSI Reference
+                    </button>
+                  )}
                 </div>
-                {psiReport && (
-                  <button
-                    onClick={() => actions.toggleReferenceDrawer()}
-                    className="w-full rounded-md border border-surface-card-border px-2 py-1.5 text-[11px] text-text-secondary hover:bg-surface-hover transition-colors"
-                  >
-                    {showRefDrawer ? 'Hide' : 'Show'} PSI Reference
-                  </button>
-                )}
-              </div>
-            )}
+              )}
+            </div>
+          )
+        }
+      >
+        <div
+          className="flex"
+          style={{ margin: '-24px', width: 'calc(100% + 48px)', height: 'calc(100% + 48px)' }}
+        >
+          <div className="flex-1 min-w-0 overflow-auto">
+            <ErrorBanner />
+            {screenContent}
           </div>
-        )
-      }
-    >
-      <div className="relative -m-6 h-[calc(100%+48px)]">
-        <div className={`absolute inset-0 ${showRefDrawer ? 'pr-80' : ''} transition-all`}>
-          {screenContent}
+          {showRefDrawer && (
+            <div className="w-80 shrink-0 border-l border-surface-card-border overflow-y-auto">
+              <PSIReferenceDrawer />
+            </div>
+          )}
         </div>
-        {showRefDrawer && <PSIReferenceDrawer />}
-      </div>
-    </Layout>
+      </Layout>
+    </WorkerProvider>
   );
 }

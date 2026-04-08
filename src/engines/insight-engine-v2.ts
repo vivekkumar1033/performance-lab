@@ -6,12 +6,13 @@
  */
 
 import { CWV_THRESHOLDS } from '../constants';
-import { INP_SUB_PHASE_THRESHOLDS, IMAGE_OVERSIZE_THRESHOLD } from '../constants-v2';
+import { INP_SUB_PHASE_THRESHOLDS, IMAGE_OVERSIZE_THRESHOLD } from '../constants';
 import { computeThirdPartyImpact } from './third-party-engine';
 import { calculateOversizeRatio, estimateResizedBytes, estimateFormatSavings } from './image-optimization-engine';
 import type {
   ImageMetadata,
   InsightBucket,
+  InsightSeverity,
   InsightV2,
   InteractionRecord,
   LCPBreakdownV2,
@@ -21,8 +22,8 @@ import type {
   NormalizedCategory,
   ResolvedRequestV2,
   ScenarioDefinitionV2,
-} from '../types-v2';
-import type { InsightSeverity, Session } from '../types';
+  Session,
+} from '../types';
 
 let nextInsightId = 100; // Start at 100 to avoid collisions with v1 insights
 

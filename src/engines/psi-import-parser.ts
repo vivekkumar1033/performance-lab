@@ -10,7 +10,7 @@ import type {
   CrUXSnapshot,
   LighthouseAuditSummary,
   ParsedPSIReport,
-} from '../types-v2';
+} from '../types';
 
 let nextId = 0;
 

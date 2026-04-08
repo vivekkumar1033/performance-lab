@@ -1,8 +1,7 @@
 import { memo } from 'react';
 import { CWV_THRESHOLDS } from '../constants';
 import { formatMs, formatBytes, formatCLS } from '../lib/format';
-import type { Metrics, PerformanceTimeline } from '../types';
-import type { FieldProjection, ParsedPSIReport } from '../types-v2';
+import type { FieldProjection, Metrics, ParsedPSIReport, PerformanceTimeline } from '../types';
 
 interface CompareModeProps {
   baselineMetrics: Metrics;

@@ -9,11 +9,12 @@
 import type {
   FixDefinition,
   LCPBreakdown,
+  NormalizedPerformanceIssue,
+  ParsedPSIReport,
   RequestDefinition,
   ScenarioDefinition,
   ScenarioId,
 } from '../types';
-import type { ParsedPSIReport, NormalizedPerformanceIssue } from '../types-v2';
 import { mapPSIToNormalizedIssues } from './normalized-issue-mapper';
 
 let scenarioCounter = 0;

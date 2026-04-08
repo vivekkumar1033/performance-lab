@@ -1,7 +1,6 @@
 import { memo, useState } from 'react';
 import { AlertTriangle, AlertCircle, Info, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
-import type { Insight } from '../types';
-import type { InsightV2 } from '../types-v2';
+import type { Insight, InsightV2 } from '../types';
 
 interface InsightCardProps {
   insight: Insight | InsightV2;

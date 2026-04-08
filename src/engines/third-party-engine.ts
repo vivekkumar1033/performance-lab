@@ -11,7 +11,7 @@
 import type {
   ResolvedRequestV2,
   ThirdPartyImpact,
-} from '../types-v2';
+} from '../types';
 
 /** Default DNS + TCP penalty per unique external origin (ms) */
 const DEFAULT_ORIGIN_PENALTY_MS = 80;

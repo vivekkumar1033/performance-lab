@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { detectPassedChecks } from '../pass-check-engine';
-import type { MetricsV2, LCPBreakdownV2, ResolvedRequestV2 } from '../../types-v2';
+import type { MetricsV2, LCPBreakdownV2, ResolvedRequestV2 } from '../../types';
 
 const DEFAULT_METRICS_V2: MetricsV2 = {
   fcp: 800, lcp: 1200, tbt: 50, si: 1500, inp: 80, cls: 0.02,

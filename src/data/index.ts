@@ -1,5 +1,4 @@
-import type { ScenarioDefinition, ScenarioId } from '../types';
-import type { ScenarioDefinitionV2 } from '../types-v2';
+import type { ScenarioDefinition, ScenarioDefinitionV2, ScenarioId } from '../types';
 import { upgradeScenarioToV2 } from '../engines/compat-adapter';
 import { SLOW_DASHBOARD } from './slow-dashboard';
 import { BUNDLE_EXPLOSION } from './bundle-explosion';

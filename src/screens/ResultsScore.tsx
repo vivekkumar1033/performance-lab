@@ -15,11 +15,7 @@ import CompareMode from '../components/CompareMode';
 import FilmstripSimulator from '../components/FilmstripSimulator';
 import PercentileBars from '../components/PercentileBars';
 import CohortAttribution from '../components/CohortAttribution';
-import type { PerfLabWorkerClient } from '../worker/worker-client';
-
-interface ResultsScoreProps {
-  getWorker: () => PerfLabWorkerClient;
-}
+import { useWorker } from '../worker/WorkerContext';
 
 const SCORE_METRIC_LABELS: Record<string, string> = {
   lcp: 'LCP',
@@ -50,7 +46,8 @@ function TierBar({ label, value, color }: { label: string; value: number; color:
   );
 }
 
-function ResultsScore({ getWorker }: ResultsScoreProps) {
+function ResultsScore() {
+  const worker = useWorker();
   const session = usePerfLabSession();
   const scenarioId = usePerfLabScenarioId();
   const score = usePerfLabScore();
@@ -68,7 +65,7 @@ function ResultsScore({ getWorker }: ResultsScoreProps) {
     evaluatedRef.current = true;
 
     actions.setLoading(true);
-    getWorker()
+    worker
       .evaluate()
       .then(result => {
         actions.setScore(result);
@@ -77,19 +74,19 @@ function ResultsScore({ getWorker }: ResultsScoreProps) {
       .finally(() => {
         actions.setLoading(false);
       });
-  }, [getWorker, actions, score, scenarioId]);
+  }, [worker, actions, score, scenarioId]);
 
   // Compute field projection when switching to field mode
   useEffect(() => {
     if (viewMode !== 'field' || fieldComputedRef.current || fieldProjection) return;
     fieldComputedRef.current = true;
 
-    getWorker()
+    worker
       .computeFieldProjection()
       .then(projection => {
         actions.setFieldProjection(projection);
       });
-  }, [viewMode, getWorker, actions, fieldProjection]);
+  }, [viewMode, worker, actions, fieldProjection]);
 
   const handleTryAnother = useCallback(() => {
     actions.reset();

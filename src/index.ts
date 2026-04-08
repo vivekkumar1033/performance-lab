@@ -9,13 +9,11 @@ export {
   usePerfLabSession,
   usePerfLabActions,
   usePerfLabInsights,
+  usePerfLabInsightsV2,
   usePerfLabTradeoffs,
   usePerfLabScore,
   usePerfLabLoading,
   usePerfLabCompleted,
-  usePerfLabInsightsV2,
-  usePerfLabTradeoffsV2,
-  usePerfLabScoreV2,
   usePerfLabMetricsV2,
   usePerfLabAttribution,
   usePerfLabRuntimeProfile,
@@ -23,60 +21,57 @@ export {
   usePerfLabFieldProjection,
   usePerfLabPSIReport,
   usePerfLabShowReferenceDrawer,
+  usePerfLabError,
 } from './store';
 export type { ViewMode } from './store';
 
-// ── Types (v1) ───────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────
 export type {
-  ScenarioDefinition,
-  ScenarioId,
+  AttributionBundle,
   BuiltinScenarioId,
-  Screen,
-  Session,
+  CLSBreakdownV2,
+  FieldCohortProjection,
+  FieldProjection,
+  FixDefinition,
+  FixSideEffects,
+  FixTransform,
+  Insight,
+  InsightBucket,
+  InsightCategory,
+  InsightSeverity,
+  InsightV2,
+  InteractionRecord,
+  LCPBreakdown,
+  LCPBreakdownV2,
+  LetterGrade,
+  MetricDegradation,
   Metrics,
   MetricsDelta,
-  Score,
-  Insight,
-  Tradeoff,
-  FixDefinition,
-  FixTransform,
-  RequestDefinition,
-  RequestCategory,
-  LCPBreakdown,
-  PerformanceTimeline,
-  ResolvedRequest,
-  UXState,
-  InsightSeverity,
-  InsightCategory,
-  TradeoffCategory,
-  LetterGrade,
-  ScoreBreakdownItem,
-  MetricDegradation,
-  UXImpact,
-  FixSideEffects,
-} from './types';
-
-// ── Types (v2) ───────────────────────────────────────────────────────
-export type {
-  ScenarioDefinitionV2,
   MetricsV2,
-  ScoreV2,
-  InsightV2,
-  TradeoffV2,
-  AttributionBundle,
-  FieldProjection,
-  FieldCohortProjection,
-  ParsedPSIReport,
-  RuntimeProfile,
-  NormalizedPerformanceIssue,
   NormalizedCategory,
-  InsightBucket,
+  NormalizedPerformanceIssue,
+  ParsedPSIReport,
+  PerformanceTimeline,
+  RequestCategory,
+  RequestDefinition,
   RequestDefinitionV2,
+  ResolvedRequest,
   ResolvedRequestV2,
-  LCPBreakdownV2,
-  CLSBreakdownV2,
-  InteractionRecord,
-} from './types-v2';
+  RuntimeProfile,
+  ScenarioDefinition,
+  ScenarioDefinitionV2,
+  ScenarioId,
+  Score,
+  ScoreBreakdownItem,
+  ScoreV2,
+  Screen,
+  Session,
+  Tradeoff,
+  TradeoffCategory,
+  TradeoffV2,
+  UXImpact,
+  UXState,
+} from './types';
 
 // ── Scenario data ────────────────────────────────────────────────────
 export { SCENARIOS, SCENARIO_LIST, registerScenario, SCENARIOS_V2 } from './data';
@@ -87,8 +82,9 @@ export { CWV_THRESHOLDS, METRIC_WEIGHTS, GRADE_THRESHOLDS, SCREENS, SCREEN_LABEL
 // ── Engine functions (for headless / programmatic use) ───────────────
 export { loadScenario, toggleFix } from './engines/scenario-engine';
 export { analyzeSession } from './engines/insight-engine';
-export { computeMetrics, scoreSession, computeTimeline, compareMetrics } from './engines/evaluation-engine';
+export { computeMetrics, scoreSession, scoreSessionV2, computeTimeline, compareMetrics } from './engines/evaluation-engine';
 export { detectTradeoffs } from './engines/tradeoff-engine';
 
 // ── Worker client ────────────────────────────────────────────────────
 export { PerfLabWorkerClient } from './worker/worker-client';
+export { WorkerProvider, useWorker } from './worker/WorkerContext';

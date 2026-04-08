@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeFieldProjection } from '../field-projection-engine';
 import type { LCPBreakdown } from '../../types';
-import type { ResolvedRequestV2, ScenarioDefinitionV2 } from '../../types-v2';
+import type { ResolvedRequestV2, ScenarioDefinitionV2 } from '../../types';
 
 function makeRequest(overrides: Partial<ResolvedRequestV2> = {}): ResolvedRequestV2 {
   return {
