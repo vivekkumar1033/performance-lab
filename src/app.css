@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@import "./perf-lab-theme.css";
+
+@layer base {
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: "Inter", -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: #0f0f1a;
+    color: var(--color-text-primary);
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-surface-active) transparent;
+  }
+}

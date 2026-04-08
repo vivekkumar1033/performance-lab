@@ -211,6 +211,72 @@ self.onmessage = (event: MessageEvent<WorkerRequestV2>) => {
         break;
       }
 
+      case 'audit-full-snapshot': {
+        if (!currentSession || !currentDefinition || !currentDefinitionV2 || !currentMetricsV2 || !currentAttribution) {
+          respond({ correlationId, type: 'error', message: 'No scenario loaded' });
+          return;
+        }
+        // Run v2 insight analysis
+        const snapshotInsights = analyzeSessionV2(
+          currentSession,
+          currentDefinitionV2,
+          currentMetricsV2,
+          currentAttribution.lcpBreakdown,
+          currentAttribution.loafEntries,
+          currentAttribution.interactions,
+          currentAttribution.clsBreakdown,
+          currentSession.requests as ResolvedRequestV2[],
+        );
+        // Run passed checks
+        const snapshotPassedChecks = detectPassedChecks(
+          currentMetricsV2,
+          currentAttribution.lcpBreakdown,
+          currentAttribution.loafEntries,
+          currentAttribution.interactions,
+          currentAttribution.clsBreakdown,
+          currentSession.requests as ResolvedRequestV2[],
+        );
+        // Run tradeoff detection
+        const snapshotActiveFixDefs = currentDefinition.fixes.filter(f => currentSession!.activeFixes.includes(f.id));
+        const snapshotTradeoffs = detectTradeoffs(
+          currentSession.baselineMetrics,
+          currentSession.currentMetrics,
+          currentSession.baselineUXState,
+          currentSession.currentUXState,
+          snapshotActiveFixDefs,
+        );
+        // Bucket the insights
+        const snapshotOpportunities = snapshotInsights.filter(i => i.bucket === 'opportunity');
+        const snapshotDiagnostics = snapshotInsights.filter(i => i.bucket === 'diagnostic');
+        // Score
+        const snapshotScore = scoreSession(currentSession.baselineMetrics, currentSession.currentMetrics, currentSession.currentUXState);
+        // Field projection
+        const snapshotProfiledReqs = applyProfiles(currentSession.requests as ResolvedRequestV2[]);
+        const snapshotFieldProjection = computeFieldProjection(
+          snapshotProfiledReqs,
+          currentDefinition.lcpBreakdown,
+          currentDefinitionV2,
+          currentSession.currentTimeline.preloads,
+        );
+        respond({
+          correlationId,
+          type: 'audit-full-snapshot-ready',
+          result: {
+            analysis: {
+              opportunities: snapshotOpportunities,
+              diagnostics: snapshotDiagnostics,
+              passedChecks: snapshotPassedChecks,
+              tradeoffWarnings: snapshotTradeoffs,
+            },
+            score: snapshotScore,
+            fieldProjection: snapshotFieldProjection,
+            metrics: currentSession.currentMetrics,
+            uxState: currentSession.currentUXState,
+          },
+        });
+        break;
+      }
+
       case 'compute-field-projection': {
         if (!currentSession || !currentDefinition || !currentDefinitionV2) {
           respond({ correlationId, type: 'error', message: 'No scenario loaded' });

@@ -4,6 +4,7 @@ import { usePerfLabActions, usePerfLabCompleted } from '../store';
 import { SCENARIO_LIST, registerScenario } from '../data';
 import { DIFFICULTY_COLORS } from '../constants';
 import PSIImportModal from '../components/PSIImportModal';
+import ModeSelector from '../components/ModeSelector';
 import type { ScenarioDefinition, ScenarioId } from '../types';
 
 function ScenarioCard({
@@ -52,10 +53,11 @@ function ScenarioGrid() {
   const actions = usePerfLabActions();
   const completed = usePerfLabCompleted();
   const [showImport, setShowImport] = useState(false);
+  const [modeSelectId, setModeSelectId] = useState<ScenarioId | null>(null);
 
   const handleSelect = useCallback((id: ScenarioId) => {
-    actions.selectScenario(id);
-  }, [actions]);
+    setModeSelectId(id);
+  }, []);
 
   const handleImport = useCallback((scenario: ScenarioDefinition) => {
     setShowImport(false);
@@ -98,6 +100,13 @@ function ScenarioGrid() {
         <PSIImportModal
           onClose={() => setShowImport(false)}
           onImport={handleImport}
+        />
+      )}
+
+      {modeSelectId && (
+        <ModeSelector
+          scenarioId={modeSelectId}
+          onClose={() => setModeSelectId(null)}
         />
       )}
 

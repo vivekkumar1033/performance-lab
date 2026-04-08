@@ -12,6 +12,20 @@ export default defineConfig([
     sourcemap: true,
     clean: true,
     treeshake: true,
+    esbuildPlugins: [{
+      name: 'rewrite-worker-url',
+      setup(build) {
+        build.onLoad({ filter: /worker-client\.ts$/ }, async (args) => {
+          const fs = await import('fs');
+          let contents = await fs.promises.readFile(args.path, 'utf8');
+          contents = contents.replace(
+            './perf-lab.worker.ts',
+            './worker/perf-lab.worker.js',
+          );
+          return { contents, loader: 'ts' };
+        });
+      },
+    }],
   },
   {
     entry: {

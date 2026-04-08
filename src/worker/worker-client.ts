@@ -1,7 +1,7 @@
 import type { Insight, ScenarioId, Score, Session, Tradeoff } from '../types';
 import type { FieldProjection, InsightV2, MetricsV2, ScoreV2 } from '../types-v2';
 import type { WorkerResponse } from './protocol';
-import type { FullAnalysisResult, WorkerResponseV2 } from './protocol-v2';
+import type { AuditSnapshotPayload, FullAnalysisResult, WorkerResponseV2 } from './protocol-v2';
 
 interface PendingRequest {
   resolve: (value: unknown) => void;
@@ -15,7 +15,7 @@ export class PerfLabWorkerClient {
 
   constructor() {
     this.worker = new Worker(
-      new URL('./worker/perf-lab.worker.js', import.meta.url),
+      new URL('./perf-lab.worker.ts', import.meta.url),
       { type: 'module' },
     );
     this.worker.onmessage = (event: MessageEvent<WorkerResponseV2>) => {
@@ -102,6 +102,13 @@ export class PerfLabWorkerClient {
       type: 'analyze-v2',
     });
     return response.insights;
+  }
+
+  async auditFullSnapshot(): Promise<AuditSnapshotPayload> {
+    const response = await this.send<Extract<WorkerResponseV2, { type: 'audit-full-snapshot-ready' }>>({
+      type: 'audit-full-snapshot',
+    });
+    return response.result;
   }
 
   async analyzeFull(): Promise<FullAnalysisResult> {

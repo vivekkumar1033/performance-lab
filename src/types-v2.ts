@@ -14,6 +14,7 @@ import type {
   Score,
   ScoreBreakdownItem,
   ScenarioDefinition,
+  Tradeoff,
   UXState,
 } from './types';
 
@@ -628,6 +629,60 @@ export interface PSIReferenceComparison {
   notes: string[];
 }
 
+// ── Full Analysis Result ─────────────────────────────────────────────
+
+export interface FullAnalysisResult {
+  opportunities: InsightV2[];
+  diagnostics: InsightV2[];
+  passedChecks: InsightV2[];
+  tradeoffWarnings: Tradeoff[];
+}
+
+// ── Audit History (Explorer flow) ───────────────────────────────────
+
+export interface AuditRoundSnapshot {
+  roundNumber: number;
+  timestamp: number;
+  activeFixes: string[];
+  metrics: Metrics;
+  score: Score;
+  uxState: UXState;
+  analysis: FullAnalysisResult;
+  fieldProjection: FieldProjection | null;
+}
+
+export interface AuditRoundDiff {
+  fromRound: number;
+  toRound: number;
+  resolvedInsightIds: string[];
+  newInsightIds: string[];
+  persistingInsightIds: string[];
+  metricDeltas: Record<string, number>;
+  scoreDelta: number;
+  fixesAdded: string[];
+  fixesRemoved: string[];
+  newTradeoffTitles: string[];
+  resolvedTradeoffTitles: string[];
+  uxStateDeltas: {
+    contentVisibility: number;
+    featureAvailability: number;
+    perceivedSpeed: number;
+  };
+}
+
+export interface AuditHistory {
+  rounds: AuditRoundSnapshot[];
+  currentRoundIndex: number;
+}
+
+export type InsightStatus = 'new' | 'persisting' | 'resolved';
+
+export interface InsightWithStatus {
+  insight: InsightV2;
+  status: InsightStatus;
+  sinceRound: number;
+}
+
 // ── Re-exports for convenience ───────────────────────────────────────
 
 export type {
@@ -646,5 +701,6 @@ export type {
   Score,
   ScoreBreakdownItem,
   ScenarioDefinition,
+  Tradeoff,
   UXState,
 };

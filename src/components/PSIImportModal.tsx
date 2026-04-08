@@ -23,7 +23,7 @@ function PSIImportModal({ onClose, onImport }: PSIImportModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const actions = usePerfLabActions();
 
-  const handleParse = useCallback(() => {
+  const handleParse = useCallback(async () => {
     setError(null);
     setPreview(null);
 
@@ -39,9 +39,37 @@ function PSIImportModal({ onClose, onImport }: PSIImportModalProps) {
         setError(`Failed to parse JSON: ${e instanceof Error ? e.message : 'Invalid JSON'}`);
       }
     } else {
-      setError('URL fetching requires a PSI API key. Please use the JSON tab to paste a PSI response instead.');
+      if (!urlInput.trim()) {
+        setError('Please enter a URL to analyze.');
+        return;
+      }
+      let targetUrl = urlInput.trim();
+      if (!/^https?:\/\//i.test(targetUrl)) {
+        targetUrl = 'https://' + targetUrl;
+      }
+      setIsLoading(true);
+      try {
+        const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(targetUrl)}&strategy=mobile&category=performance`;
+        const res = await fetch(apiUrl);
+        if (!res.ok) {
+          if (res.status === 429) {
+            setError('Rate limited by PageSpeed Insights API. Please wait a moment and try again, or use the JSON tab.');
+          } else {
+            const body = await res.json().catch(() => null);
+            setError(body?.error?.message ?? `PSI API returned ${res.status}`);
+          }
+          return;
+        }
+        const json = await res.text();
+        const report = parsePSIResponse(json);
+        setPreview(report);
+      } catch (e) {
+        setError(`Failed to fetch: ${e instanceof Error ? e.message : 'Network error'}`);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [tab, jsonInput]);
+  }, [tab, jsonInput, urlInput]);
 
   const handleCreateScenario = useCallback(() => {
     if (!preview) return;
@@ -131,7 +159,7 @@ function PSIImportModal({ onClose, onImport }: PSIImportModalProps) {
                 className="w-full rounded-lg border border-surface-card-border bg-surface-card px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:ring-1 focus:ring-accent"
               />
               <p className="text-[10px] text-text-secondary/60">
-                Tip: Run the analysis at pagespeed.web.dev, then paste the JSON from the API response.
+                Calls the PageSpeed Insights API directly. Analysis takes 10-30 seconds.
               </p>
             </div>
           )}
@@ -199,10 +227,10 @@ function PSIImportModal({ onClose, onImport }: PSIImportModalProps) {
           {!preview ? (
             <button
               onClick={handleParse}
-              disabled={tab === 'json' ? !jsonInput.trim() : !urlInput.trim()}
+              disabled={(tab === 'json' ? !jsonInput.trim() : !urlInput.trim()) || isLoading}
               className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
-              Parse
+              {isLoading ? 'Analyzing...' : 'Parse'}
             </button>
           ) : (
             <button

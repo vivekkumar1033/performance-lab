@@ -5,7 +5,7 @@ export type BuiltinScenarioId = 'slow-dashboard' | 'bundle-explosion' | 'rerende
 // Widened to support dynamic PSI-imported scenario IDs
 export type ScenarioId = BuiltinScenarioId | (string & {});
 
-export type Screen = 'grid' | 'story' | 'timeline' | 'lcp-breakdown' | 'insights' | 'fix' | 'tradeoffs' | 'results';
+export type Screen = 'grid' | 'story' | 'timeline' | 'lcp-breakdown' | 'insights' | 'fix' | 'tradeoffs' | 'results' | 'explorer-briefing' | 'explorer' | 'explorer-results';
 
 export interface ScenarioDefinition {
   id: ScenarioId;

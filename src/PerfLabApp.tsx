@@ -7,12 +7,14 @@ import {
   usePerfLabActions,
   usePerfLabPSIReport,
   usePerfLabShowReferenceDrawer,
+  usePerfLabExplorerMode,
 } from './store';
 import { SCREENS, SCREEN_LABELS } from './constants';
 import { SCENARIOS } from './data';
 import { PerfLabWorkerClient } from './worker/worker-client';
 import FieldLabToggle from './components/FieldLabToggle';
 import PSIReferenceDrawer from './components/PSIReferenceDrawer';
+import ExplorerSidebar from './components/ExplorerSidebar';
 import type { Screen } from './types';
 import ScenarioGrid from './screens/ScenarioGrid';
 import StoryLoader from './screens/StoryLoader';
@@ -22,6 +24,9 @@ import InsightsPanel from './screens/InsightsPanel';
 import FixSimulator from './screens/FixSimulator';
 import TradeoffPanel from './screens/TradeoffPanel';
 import ResultsScore from './screens/ResultsScore';
+import ExplorerBriefing from './screens/ExplorerBriefing';
+import ExplorerWorkspace from './screens/ExplorerWorkspace';
+import ExplorerResults from './screens/ExplorerResults';
 
 function SidebarProgress({
   currentScreen,
@@ -98,6 +103,7 @@ export default function PerfLabApp({ Layout = DefaultLayout }: PerfLabAppProps) 
   const actions = usePerfLabActions();
   const psiReport = usePerfLabPSIReport();
   const showRefDrawer = usePerfLabShowReferenceDrawer();
+  const explorerMode = usePerfLabExplorerMode();
   const workerRef = useRef<PerfLabWorkerClient | null>(null);
 
   // Initialize worker
@@ -138,6 +144,12 @@ export default function PerfLabApp({ Layout = DefaultLayout }: PerfLabAppProps) 
         return <TradeoffPanel getWorker={getWorker} />;
       case 'results':
         return <ResultsScore getWorker={getWorker} />;
+      case 'explorer-briefing':
+        return <ExplorerBriefing getWorker={getWorker} />;
+      case 'explorer':
+        return <ExplorerWorkspace getWorker={getWorker} />;
+      case 'explorer-results':
+        return <ExplorerResults getWorker={getWorker} />;
     }
   }, [currentScreen, getWorker]);
 
@@ -145,29 +157,33 @@ export default function PerfLabApp({ Layout = DefaultLayout }: PerfLabAppProps) 
     <Layout
       sidebarWidth={200}
       sidebar={
-        <div className="flex flex-col h-full">
-          <SidebarProgress
-            currentScreen={currentScreen}
-            scenarioId={scenarioId}
-            onNavigate={handleNavigate}
-          />
-          {currentScreen !== 'grid' && currentScreen !== 'story' && (
-            <div className="mt-auto p-3 border-t border-surface-card-border space-y-3">
-              <div>
-                <p className="text-[9px] uppercase tracking-wider text-text-secondary/60 mb-2">View Mode</p>
-                <FieldLabToggle />
+        explorerMode && currentScreen === 'explorer' ? (
+          <ExplorerSidebar />
+        ) : (
+          <div className="flex flex-col h-full">
+            <SidebarProgress
+              currentScreen={currentScreen}
+              scenarioId={scenarioId}
+              onNavigate={handleNavigate}
+            />
+            {currentScreen !== 'grid' && currentScreen !== 'story' && currentScreen !== 'explorer-briefing' && currentScreen !== 'explorer-results' && (
+              <div className="mt-auto p-3 border-t border-surface-card-border space-y-3">
+                <div>
+                  <p className="text-[9px] uppercase tracking-wider text-text-secondary/60 mb-2">View Mode</p>
+                  <FieldLabToggle />
+                </div>
+                {psiReport && (
+                  <button
+                    onClick={() => actions.toggleReferenceDrawer()}
+                    className="w-full rounded-md border border-surface-card-border px-2 py-1.5 text-[11px] text-text-secondary hover:bg-surface-hover transition-colors"
+                  >
+                    {showRefDrawer ? 'Hide' : 'Show'} PSI Reference
+                  </button>
+                )}
               </div>
-              {psiReport && (
-                <button
-                  onClick={() => actions.toggleReferenceDrawer()}
-                  className="w-full rounded-md border border-surface-card-border px-2 py-1.5 text-[11px] text-text-secondary hover:bg-surface-hover transition-colors"
-                >
-                  {showRefDrawer ? 'Hide' : 'Show'} PSI Reference
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )
       }
     >
       <div className="relative -m-6 h-[calc(100%+48px)]">

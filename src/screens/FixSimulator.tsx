@@ -38,6 +38,8 @@ function FixSimulator({ getWorker }: FixSimulatorProps) {
     try {
       const result = await getWorker().setRuntimeProfile(profileId);
       actions.setSession(result.session);
+      actions.setRuntimeProfile(profileId);
+      actions.setMetricsV2(result.metricsV2);
     } catch {
       // Profile change failed — keep current state
     }

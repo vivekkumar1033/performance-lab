@@ -11,6 +11,9 @@ export const SCREEN_LABELS: Record<Screen, string> = {
   fix: 'Fix It',
   tradeoffs: 'Tradeoffs',
   results: 'Results',
+  'explorer-briefing': 'Briefing',
+  explorer: 'Explorer',
+  'explorer-results': 'Results',
 };
 
 export const GRADE_THRESHOLDS: { min: number; grade: LetterGrade }[] = [
